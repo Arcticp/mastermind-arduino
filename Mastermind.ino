@@ -21,7 +21,7 @@
 #define nC5 523
 #define nD5 587
 #define nE5 660
-//above this is bad
+//above this sounds bad
 #define nF5 698
 #define nG5 784
 #define nA5 880
@@ -33,6 +33,10 @@ int quarterNoteDuration = 500;
 int buzzerPin = 14;
 int buttonPin = A1;
 int lightPins[6][2] = {{2,8},{3,9},{4,10},{5,11},{6,12},{7,13}};
+//Change the light pins depending on where you've connected the LEDs into the arduino.
+//The positions are: lightPins[6][2] = {{g1,w1},{g2,w2},{g3,w3},{g4,w4},{g5,w5},{g6,w6}};
+//g1 = green light in column 1
+//w2 = white light in column 2, etc.
 
 //-----------button detection variables----------------------------------
 #define BUTTONLISTLEN 6 
@@ -40,14 +44,14 @@ int lightPins[6][2] = {{2,8},{3,9},{4,10},{5,11},{6,12},{7,13}};
 int currentState = 0; //values 0,1,2,3,4,5 in real-time
 int previousState = 0; //values 0,1,2,3,4,5 for what was previously pressed
 int previousStreak = 1; //how many of the same value in a row we've seen
-int buttonState = 0; //values 0,1,2,3,4,5 for what button is pressed
+int buttonState = 0; //values 0,1,2,3,4,5 for what button is currently pressed
 
-int buttonList[BUTTONLISTLEN]; //array for holding the buttons in a sequence
+int buttonList[BUTTONLISTLEN]; //array for remembering the buttons in the current sequence
 int buttonCounter = 0; //counts the number of buttons that have been pushed
 
-int secretCode[BUTTONLISTLEN]; //array that tracks the secret code that you guess
+int secretCode[BUTTONLISTLEN]; //array that tracks the secret code that you try to guess
 int currentGuesses = 0; //how many guesses the players have made
-char allGreen[BUTTONLISTLEN] = {'g','g','g','g','g','g'}; //all green code
+char allGreen[BUTTONLISTLEN] = {'g','g','g','g','g','g'}; //all green code for comparisons
 
 int activationCode[BUTTONLISTLEN] = {2,2,2,3,3,4}; //code needed to activate the game
 bool isActivated; //blocks the game from working until set to true
@@ -65,10 +69,12 @@ void diagonalSnakeLights();
 void setup() {
   Serial.begin(9600); //start communication from the arduino
   
-  //setup the activation state
-  isActivated = false;
-  //setup escape game
-  isEscapeGame = true;
+  
+  //setup escape game (set to true if part of escape room game,
+  //set to false to just play the mastermind game itself)
+  isEscapeGame = false;
+  //start deactivated if part of escape game, start activated if just playing for fun.
+  isActivated = !isEscapeGame; 
   
   //generate a random secret code
   randomSeed(analogRead(A5)); //set the seed based on an unconnected pin 
@@ -134,7 +140,7 @@ void loop() {
 
 int detectButton(int pin) {
   //reads the value from the analog pin and determines what button is being pressed
-  //WIP maybe make this a list or array to be changed more easily
+  //WIP maybe make these values a list or array to be changed more easily
   int val = analogRead(pin); //the value of the analog pin, 0-1023
   if (val >= 760 && val <= 932) {
     //Serial.println(1); 
@@ -226,6 +232,8 @@ bool isCharMatch(char *arr1, char *arr2) {
 
 void updateLEDs() {
   //update the display of the LEDs based on the player's guess
+  //sets up an array of 6 characters and sends those to the turnOnLights function
+  
   bool isUsed[BUTTONLISTLEN]; //if the place has been used already, set it to true
   memset(isUsed, false, sizeof(isUsed)); //set all places to not used
   char lightArray[BUTTONLISTLEN]; //light status ('w'hite,'g'reen,'o'ff)
@@ -292,7 +300,7 @@ void updateLEDs() {
 }
 
 void turnOnLights (char *newLightArray) {
-  //turn on lights according to the passed array
+  //turn on lights according to the recieved character array
   for (int i = 0; i<BUTTONLISTLEN; i++) {
     switch (newLightArray[i]) {
       case 'g': 
